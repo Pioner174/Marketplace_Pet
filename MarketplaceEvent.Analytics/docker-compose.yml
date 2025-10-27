@@ -41,18 +41,18 @@ services:
       - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
     restart: always
 
-  analytics-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: analytics-service
-    environment:
-      - KAFKA__BOOTSTRAPSERVERS=kafka:29092
+  app:
+    build: .
+    container_name: marketplace-analytics
+    restart: always
+    ports:
+      - "5000:8080"
     depends_on:
       - kafka
-    restart: always
-    networks:
-      - default
+      - zookeeper
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      KAFKA__BOOTSTRAPSERVERS: kafka:29092
 
 networks:
   default:

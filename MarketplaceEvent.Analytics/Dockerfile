@@ -1,29 +1,32 @@
 # См. статью по ссылке https://aka.ms/customizecontainer, чтобы узнать как настроить контейнер отладки и как Visual Studio использует этот Dockerfile для создания образов для ускорения отладки.
 
-# Этот этап используется при запуске из VS в быстром режиме (по умолчанию для конфигурации отладки)
+# Базовый слой для работы приложения
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
-# Этот этап используется для сборки проекта службы
+# Слой сборки
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["MarketplaceEvent.Analytics/MarketplaceEvent.Analytics.csproj", "MarketplaceEvent.Analytics/"]
-RUN dotnet restore "./MarketplaceEvent.Analytics/MarketplaceEvent.Analytics.csproj"
-COPY . .
-WORKDIR "/src/MarketplaceEvent.Analytics"
-RUN dotnet build "./MarketplaceEvent.Analytics.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Этот этап используется для публикации проекта службы, который будет скопирован на последний этап
+# Копируем csproj и восстанавливаем зависимости
+COPY ["MarketplaceEvent.Analytics.csproj", "."]
+RUN dotnet restore "MarketplaceEvent.Analytics.csproj"
+
+# Копируем остальной код
+COPY . .
+
+# Сборка проекта
+RUN dotnet build "MarketplaceEvent.Analytics.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Публикация
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./MarketplaceEvent.Analytics.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "MarketplaceEvent.Analytics.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Этот этап используется в рабочей среде или при запуске из VS в обычном режиме (по умолчанию, когда конфигурация отладки не используется)
+# Финальный образ
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .

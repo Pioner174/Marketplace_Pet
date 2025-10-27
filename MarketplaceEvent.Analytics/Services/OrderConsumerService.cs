@@ -7,6 +7,8 @@ namespace MarketplaceEvent.Analytics.Services
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            Console.WriteLine("🚀 OrderConsumerService запущен");
+
             var config = new ConsumerConfig
             {
                 BootstrapServers = Environment.GetEnvironmentVariable("KAFKA__BOOTSTRAPSERVERS") ?? "kafka:29092",
@@ -15,9 +17,26 @@ namespace MarketplaceEvent.Analytics.Services
             };
 
             using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
+
+            for (int i = 0; i < 30; i++)
+            {
+                try
+                {
+                    using var adminClient = new AdminClientBuilder(config).Build();
+                    var metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(3));
+                    Console.WriteLine($"Kafka доступна ({metadata.Brokers.Count} брокеров)");
+                    break;
+                }
+                catch
+                {
+                    Console.WriteLine($"Ожидаем Kafka... попытка {i + 1}");
+                    await Task.Delay(2000, stoppingToken);
+                }
+            }
+
             consumer.Subscribe("orders-topic");
 
-            Console.WriteLine("🟢 MarketplaceEvent.Analytics слушает 'orders-topic'");
+            Console.WriteLine("MarketplaceEvent.Analytics слушает 'orders-topic'");
 
             while (!stoppingToken.IsCancellationRequested)
             {
