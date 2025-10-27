@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option csharp_namespace = "MarketplaceEvent";
+
+service OrderService {
+  rpc CreateOrder (OrderRequest) returns (OrderReply);
+}
+
+message OrderRequest {
+  string orderId = 1;
+  string product = 2;
+  string buyer = 3;
+  double amount = 4;
+}
+
+message OrderReply {
+  string status = 1;
+}
